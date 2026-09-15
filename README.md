@@ -6,7 +6,7 @@ BotDrop wraps [OpenClaw](https://github.com/nicepkg/openclaw) into a user-friend
 
 ## Features
 
-- **Guided 4-step setup** — Auth → Agent → Install → Channel
+- **Guided 4-step setup** — Agent → Install → Auth → Channel
 - **Multi-provider support** — Anthropic, OpenAI, Google Gemini, OpenRouter, and more
 - **Telegram & Discord integration** — Chat with your agent through your favorite messenger
 - **Background gateway** — Keeps your agent running with auto-restart
@@ -21,17 +21,28 @@ Download the latest APK from [Releases](../../releases).
 ### Build from Source
 
 Prerequisites:
-- Android SDK (API level 34+)
-- NDK r29+
-- JDK 17+
+- Android SDK Platform 36
+- NDK 29.0.14206865
+- JDK 17
+- Node.js and npm (for preparing the bundled runtime)
+
+Prepare the OpenClaw runtime and QQ plugin before building; they are required for the app's offline setup.
 
 ```bash
 git clone https://github.com/louzhixian/botdrop.git
 cd botdrop
+
+export BOTDROP_BUNDLED_OPENCLAW_VERSION=2026.3.13
+QQBOT_VERSION=1.5.4
+./scripts/build-openclaw-bundle.sh "$BOTDROP_BUNDLED_OPENCLAW_VERSION"
+./scripts/build-qqbot-plugin-bundle.sh "$QQBOT_VERSION"
+
+export BOTDROP_OPENCLAW_BUNDLE_TGZ="$PWD/build/openclaw-bundles/openclaw-runtime-${BOTDROP_BUNDLED_OPENCLAW_VERSION}.tar"
+export BOTDROP_QQBOT_PLUGIN_DIR="$PWD/build/openclaw-bundles/qqbot-sliverp-qqbot-${QQBOT_VERSION}/package"
 ./gradlew assembleDebug
 ```
 
-The APK will be at `app/build/outputs/apk/debug/`.
+Bundle preparation requires network access. The APK will be at `app/build/outputs/apk/debug/` (arm64 only).
 
 ## Architecture
 
@@ -49,7 +60,7 @@ BotDrop is built on [Termux](https://github.com/termux/termux-app), providing a 
 └──────────────────────────────────┘
 ```
 
-See [docs/design.md](docs/design.md) for detailed architecture.
+See [docs/design.md](docs/design.md) for the original design proposal; some flows differ from the current implementation.
 
 ## Contributing
 
