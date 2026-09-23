@@ -561,108 +561,13 @@ public final class TermuxInstaller {
             requestedInstallSpec = "openclaw@latest";
         }
 
-        String bundledWrapperNodePath = BundledOpenclawUtils.STAGED_CURRENT_RUNTIME_LINK
-            + "/node_modules:$PREFIX/lib/node_modules";
-
         return
-            "echo \"BOTDROP_STEP:2:START:Installing OpenClaw\"\n" +
-            "REQUESTED_INSTALL_SPEC='" + requestedInstallSpec + "'\n" +
-            "OFFLINE_ROOT=\"" + BundledOpenclawUtils.STAGED_ROOT + "\"\n" +
-            "OFFLINE_MANIFEST=\"$OFFLINE_ROOT/manifest.properties\"\n" +
-            "OFFLINE_RUNTIME_ROOT=\"" + BundledOpenclawUtils.STAGED_RUNTIME_ROOT + "\"\n" +
-            "OFFLINE_CURRENT_LINK=\"" + BundledOpenclawUtils.STAGED_CURRENT_RUNTIME_LINK + "\"\n" +
-            "GLOBAL_NODE_MODULES_ROOT=\"" + BundledOpenclawUtils.GLOBAL_NODE_MODULES_ROOT + "\"\n" +
-            "if [ ! -f \"$OFFLINE_MANIFEST\" ]; then\n" +
-            "    echo \"BOTDROP_ERROR:Bundled OpenClaw assets are missing from the APK\"\n" +
-            "    exit 1\n" +
-            "fi\n" +
-            ". \"$OFFLINE_MANIFEST\"\n" +
-            "USE_BUNDLED_OPENCLAW=0\n" +
-            "if [ -n \"$installSpec\" ] && [ -f \"$OFFLINE_ROOT/${runtimeArchive:-"
-                + BundledOpenclawUtils.DEFAULT_RUNTIME_ARCHIVE_NAME + "}\" ]; then\n" +
-            "    if [ \"$REQUESTED_INSTALL_SPEC\" = \"openclaw@latest\" ] || [ \"$REQUESTED_INSTALL_SPEC\" = \"$installSpec\" ]; then\n" +
-                "        USE_BUNDLED_OPENCLAW=1\n" +
-            "    fi\n" +
-            "fi\n" +
-            "if [ \"$USE_BUNDLED_OPENCLAW\" = \"1\" ]; then\n" +
-            "    BUNDLED_VERSION=\"${version:-" + requestedInstallSpec.replace("openclaw@", "") + "}\"\n" +
-            "    BUNDLED_RUNTIME_ARCHIVE=\"${runtimeArchive:-" + BundledOpenclawUtils.DEFAULT_RUNTIME_ARCHIVE_NAME + "}\"\n" +
-            "    TARGET_DIR=\"$OFFLINE_RUNTIME_ROOT/$BUNDLED_VERSION\"\n" +
-            "    TMP_DIR=\"$TARGET_DIR.tmp\"\n" +
-            "    rm -rf \"$TMP_DIR\"\n" +
-            "    mkdir -p \"$TMP_DIR\"\n" +
-            "    case \"$BUNDLED_RUNTIME_ARCHIVE\" in\n" +
-            "      *.tar.gz|*.tgz) tar -xzf \"$OFFLINE_ROOT/$BUNDLED_RUNTIME_ARCHIVE\" -C \"$TMP_DIR\" ;;\n" +
-            "      *) tar -xf \"$OFFLINE_ROOT/$BUNDLED_RUNTIME_ARCHIVE\" -C \"$TMP_DIR\" ;;\n" +
-            "    esac\n" +
-            "    EXTRACTED_NODE_MODULES=\"\"\n" +
-            "    for CANDIDATE in \\\n" +
-            "      \"$TMP_DIR/node_modules\" \\\n" +
-            "      \"$TMP_DIR/node_modules-pruned\" \\\n" +
-            "      \"$TMP_DIR/package/node_modules\" \\\n" +
-            "      \"$TMP_DIR/bundle/node_modules\"; do\n" +
-            "      if [ -d \"$CANDIDATE/openclaw\" ]; then\n" +
-            "        EXTRACTED_NODE_MODULES=\"$CANDIDATE\"\n" +
-            "        break\n" +
-            "      fi\n" +
-            "    done\n" +
-            "    if [ -z \"$EXTRACTED_NODE_MODULES\" ]; then\n" +
-            "      MAYBE_NODE_MODULES=$(find \"$TMP_DIR\" -mindepth 1 -maxdepth 3 -type d -name node_modules | head -n 1)\n" +
-            "      if [ -n \"$MAYBE_NODE_MODULES\" ] && [ -d \"$MAYBE_NODE_MODULES/openclaw\" ]; then\n" +
-            "        EXTRACTED_NODE_MODULES=\"$MAYBE_NODE_MODULES\"\n" +
-            "      fi\n" +
-            "    fi\n" +
-            "    if [ -z \"$EXTRACTED_NODE_MODULES\" ]; then\n" +
-            "      echo \"BOTDROP_ERROR:Bundled OpenClaw archive missing node_modules/openclaw\"\n" +
-            "      rm -rf \"$TMP_DIR\"\n" +
-            "      exit 1\n" +
-            "    fi\n" +
-            "    rm -rf \"$TARGET_DIR\"\n" +
-            "    mkdir -p \"$TARGET_DIR\"\n" +
-            "    mv \"$EXTRACTED_NODE_MODULES\" \"$TARGET_DIR/node_modules\"\n" +
-            "    rm -rf \"$TMP_DIR\"\n" +
-            "    ln -sfn \"$TARGET_DIR\" \"$OFFLINE_CURRENT_LINK\"\n" +
-            "    mkdir -p \"$GLOBAL_NODE_MODULES_ROOT\"\n" +
-            "    for entry in \"$OFFLINE_CURRENT_LINK/node_modules\"/*; do\n" +
-            "      [ -e \"$entry\" ] || continue\n" +
-            "      entry_name=\"$(basename \"$entry\")\"\n" +
-            "      ln -sfn \"$entry\" \"$GLOBAL_NODE_MODULES_ROOT/$entry_name\"\n" +
-            "    done\n" +
-            "    cat > $PREFIX/bin/openclaw <<'BOTDROP_OPENCLAW_WRAPPER'\n" +
-            "#!" + com.termux.shared.termux.TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + "/bash\n" +
-            "PREFIX=\"$(cd \"$(dirname \"$0\")/..\" && pwd)\"\n" +
-            "RUNTIME_ROOT=\"$PREFIX/share/botdrop/openclaw-runtime/current\"\n" +
-            OpenclawVersionUtils.buildOpenclawWrapperBody(
-                "$RUNTIME_ROOT/node_modules/openclaw",
-                bundledWrapperNodePath,
-                oldSpaceMb
-            ) +
-            "BOTDROP_OPENCLAW_WRAPPER\n" +
-            "    chmod 755 $PREFIX/bin/openclaw\n" +
-            "    KOFFI_DIR=\"$OFFLINE_CURRENT_LINK/node_modules/openclaw/node_modules/koffi\"\n" +
-            "    KOFFI_INDEX=\"$KOFFI_DIR/index.js\"\n" +
-            "    if [ -d \"$KOFFI_DIR\" ] && [ -f \"$KOFFI_INDEX\" ]; then\n" +
-            "      if [ ! -f \"$KOFFI_INDEX.orig\" ]; then\n" +
-            "        cp \"$KOFFI_INDEX\" \"$KOFFI_INDEX.orig\"\n" +
-            "      fi\n" +
-            "      cat > \"$KOFFI_INDEX\" <<'BOTDROP_KOFFI_MOCK'\n" +
-            "module.exports = {\n" +
-            "  load() {\n" +
-            "    throw new Error(\"koffi native module not available on this platform\");\n" +
-            "  }\n" +
-            "};\n" +
-            "BOTDROP_KOFFI_MOCK\n" +
-            "    fi\n" +
-            "    echo \"BOTDROP_STEP:2:DONE\"\n" +
-            "    touch \"$MARKER\"\n" +
-            "    echo \"BOTDROP_COMPLETE\"\n" +
-            "else\n" +
-            "    echo \"BOTDROP_ERROR:Requested $REQUESTED_INSTALL_SPEC is not available in the bundled OpenClaw runtime ($installSpec)\"\n" +
-            "    exit 1\n" +
-            "fi\n";
+            "echo \"BOTDROP_STEP:2:START:Installing OpenClaw from npm\"\n" +
+            "npm install -g --no-package-lock --no-audit --no-fund '" + requestedInstallSpec + "'\n" +
+            "echo \"BOTDROP_STEP:2:DONE\"\n";
     }
 
-    private static long getDeviceTotalRamMb(Context context) {
+        private static long getDeviceTotalRamMb(Context context) {
         try {
             ActivityManager activityManager =
                 (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
