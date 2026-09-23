@@ -78,7 +78,7 @@ public final class TermuxInstaller {
         Error filesDirectoryAccessibleError;
         String openclawVersion = activity.getSharedPreferences(
             "botdrop_settings", Context.MODE_PRIVATE)
-            .getString("openclaw_install_version", "openclaw@latest");
+            .getString("openclaw_install_version", "openclaw@2026.9.5");
 
         // This will also call Context.getFilesDir(), which should ensure that termux files directory
         // is created if it does not already exist
@@ -557,12 +557,12 @@ public final class TermuxInstaller {
 
     private static String buildOpenclawInstallScriptBody(String openclawVersion, int oldSpaceMb) {
         String requestedInstallSpec = OpenclawVersionUtils.normalizeInstallVersion(openclawVersion);
-        if (requestedInstallSpec == null) {
-            requestedInstallSpec = "openclaw@latest";
+        if (requestedInstallSpec == null || "openclaw@latest".equals(requestedInstallSpec)) {
+            requestedInstallSpec = "openclaw@2026.9.5";
         }
 
         return
-            "echo \"BOTDROP_STEP:2:START:Installing OpenClaw from npm\"\n" +
+            "echo \"BOTDROP_STEP:2:START:Installing OpenClaw (" + requestedInstallSpec + ") from npm\"\n" +
             "npm install -g --no-package-lock --no-audit --no-fund '" + requestedInstallSpec + "'\n" +
             "echo \"BOTDROP_STEP:2:DONE\"\n";
     }

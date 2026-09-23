@@ -85,7 +85,7 @@ public final class BundledOpenclawUtils {
         }
 
         if (normalizedRequested == null || "openclaw@latest".equals(normalizedRequested)) {
-            return manifest.installSpec;
+            return "openclaw@2026.9.5";
         }
 
         return normalizedRequested;

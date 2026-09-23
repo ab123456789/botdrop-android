@@ -502,12 +502,12 @@ public class BotDropService extends Service {
     static String resolveInstallVersionPreference(Context context) {
         String requested = context
             .getSharedPreferences("botdrop_settings", Context.MODE_PRIVATE)
-            .getString("openclaw_install_version", "openclaw@latest");
+            .getString("openclaw_install_version", "openclaw@2026.9.5");
         String preferred = BundledOpenclawUtils.resolvePreferredInstallSpec(
             requested,
             BundledOpenclawUtils.loadManifest(context)
         );
-        return preferred != null ? preferred : "openclaw@latest";
+        return preferred != null ? preferred : "openclaw@2026.9.5";
     }
 
     private void stageBundledOpenclawAssetsIfPresent() {
