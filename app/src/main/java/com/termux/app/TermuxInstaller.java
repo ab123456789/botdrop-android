@@ -561,13 +561,45 @@ public final class TermuxInstaller {
             requestedInstallSpec = "openclaw@2026.9.5";
         }
 
+        String binPrefix = com.termux.shared.termux.TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH;
+
         return
             "echo \"BOTDROP_STEP:2:START:Installing OpenClaw (" + requestedInstallSpec + ") from npm\"\n" +
-            "npm install -g --no-package-lock --no-audit --no-fund '" + requestedInstallSpec + "'\n" +
-            "echo \"BOTDROP_STEP:2:DONE\"\n";
+            "export SSL_CERT_FILE=$PREFIX/etc/tls/cert.pem\n" +
+            "if ! npm install -g --no-package-lock --no-audit --no-fund --ignore-scripts --force '" + requestedInstallSpec + "'; then\n" +
+            "    echo \"BOTDROP_ERROR:Failed to install " + requestedInstallSpec + " via npm\"\n" +
+            "    exit 1\n" +
+            "fi\n" +
+            "cat > $PREFIX/bin/openclaw <<'BOTDROP_OPENCLAW_WRAPPER'\n" +
+            "#!" + binPrefix + "/bash\n" +
+            "PREFIX=\"$(cd \"$(dirname \"$0\")/..\" && pwd)\"\n" +
+            OpenclawVersionUtils.buildOpenclawWrapperBody(
+                "$PREFIX/lib/node_modules/openclaw",
+                "$PREFIX/lib/node_modules",
+                oldSpaceMb
+            ) +
+            "BOTDROP_OPENCLAW_WRAPPER\n" +
+            "chmod 755 $PREFIX/bin/openclaw\n" +
+            "KOFFI_DIR=\"$PREFIX/lib/node_modules/openclaw/node_modules/koffi\"\n" +
+            "KOFFI_INDEX=\"$KOFFI_DIR/index.js\"\n" +
+            "if [ -d \"$KOFFI_DIR\" ] && [ -f \"$KOFFI_INDEX\" ]; then\n" +
+            "  if [ ! -f \"$KOFFI_INDEX.orig\" ]; then\n" +
+            "    cp \"$KOFFI_INDEX\" \"$KOFFI_INDEX.orig\"\n" +
+            "  fi\n" +
+            "  cat > \"$KOFFI_INDEX\" <<'BOTDROP_KOFFI_MOCK'\n" +
+            "module.exports = {\n" +
+            "  load() {\n" +
+            "    throw new Error(\"koffi native module not available on this platform\");\n" +
+            "  }\n" +
+            "};\n" +
+            "BOTDROP_KOFFI_MOCK\n" +
+            "fi\n" +
+            "echo \"BOTDROP_STEP:2:DONE\"\n" +
+            "touch \"$MARKER\"\n" +
+            "echo \"BOTDROP_COMPLETE\"\n";
     }
 
-        private static long getDeviceTotalRamMb(Context context) {
+    private static long getDeviceTotalRamMb(Context context) {
         try {
             ActivityManager activityManager =
                 (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
